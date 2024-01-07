@@ -112,7 +112,7 @@ public class RobotContainer {
     // flywheel::getCharacterizationVelocity));
 
     autoChooser.addOption(
-        "Simple Path",
+        "Example Path",
         AutoBuilder.followPathWithEvents(PathPlannerPath.fromPathFile("Example Path")));
 
     // Configure the button bindings
