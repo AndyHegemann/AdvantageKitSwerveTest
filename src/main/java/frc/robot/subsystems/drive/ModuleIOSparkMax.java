@@ -50,6 +50,7 @@ public class ModuleIOSparkMax implements ModuleIO {
 
   private final StatusSignal<Double> turnAbsolutePosition;
   private final boolean isTurnMotorInverted = true;
+  private final boolean isDriveMotorInverted = true;
   private final Rotation2d absoluteEncoderOffset;
 
   public ModuleIOSparkMax(int index) {
@@ -96,6 +97,7 @@ public class ModuleIOSparkMax implements ModuleIO {
     BaseStatusSignal.setUpdateFrequencyForAll(50.0, turnAbsolutePosition);
 
     turnSparkMax.setInverted(isTurnMotorInverted);
+    driveSparkMax.setInverted(isDriveMotorInverted);
     driveSparkMax.setSmartCurrentLimit(40);
     turnSparkMax.setSmartCurrentLimit(30);
     driveSparkMax.enableVoltageCompensation(12.0);
