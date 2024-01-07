@@ -14,7 +14,7 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.path.PathPlannerPath;
+import com.pathplanner.lib.commands.PathPlannerAuto;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
 import edu.wpi.first.wpilibj.GenericHID;
@@ -111,9 +111,7 @@ public class RobotContainer {
     //         flywheel, flywheel::runCharacterizationVolts,
     // flywheel::getCharacterizationVelocity));
 
-    autoChooser.addOption(
-        "Example Path",
-        AutoBuilder.followPathWithEvents(PathPlannerPath.fromPathFile("Example Path")));
+    autoChooser.addOption("Example Auto", new PathPlannerAuto("Example Auto"));
 
     // Configure the button bindings
     configureButtonBindings();
