@@ -1,4 +1,4 @@
-// Copyright 2021-2023 FRC 6328
+// Copyright 2021-2024 FRC 6328
 // http://github.com/Mechanical-Advantage
 //
 // This program is free software; you can redistribute it and/or
@@ -14,21 +14,22 @@
 package frc.robot;
 
 import com.pathplanner.lib.auto.AutoBuilder;
-import com.pathplanner.lib.commands.PathPlannerAuto;
 import edu.wpi.first.math.geometry.Pose2d;
 import edu.wpi.first.math.geometry.Rotation2d;
+import edu.wpi.first.wpilibj.DigitalInput;
+import edu.wpi.first.wpilibj.DriverStation;
+import edu.wpi.first.wpilibj.DriverStation.Alliance;
 import edu.wpi.first.wpilibj.GenericHID;
 import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.Commands;
 import edu.wpi.first.wpilibj2.command.button.CommandXboxController;
+import edu.wpi.first.wpilibj2.command.button.Trigger;
 import frc.robot.commands.DriveCommands;
-import frc.robot.commands.FeedForwardCharacterization;
+import frc.robot.subsystems.Shooter.Shooter;
+import frc.robot.subsystems.Shooter.ShooterIOSparkMax;
 import frc.robot.subsystems.drive.Drive;
-import frc.robot.subsystems.drive.GyroIO;
 import frc.robot.subsystems.drive.GyroIONavX;
-import frc.robot.subsystems.drive.ModuleIO;
-import frc.robot.subsystems.drive.ModuleIOSim;
 import frc.robot.subsystems.drive.ModuleIOSparkMax;
 import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
 
@@ -40,78 +41,39 @@ import org.littletonrobotics.junction.networktables.LoggedDashboardChooser;
  */
 public class RobotContainer {
   // Subsystems
-  private final Drive drive;
-  // private final Flywheel flywheel;
+  final Drive drive;
+  private Shooter shooter;
+  // private Flywheel flywheel;
+
+  DigitalInput beamBreak = new DigitalInput(9);
+  Trigger noteDetected = new Trigger(beamBreak::get);
 
   // Controller
   private final CommandXboxController controller = new CommandXboxController(0);
 
   // Dashboard inputs
   private final LoggedDashboardChooser<Command> autoChooser;
-  // private final LoggedDashboardNumber flywheelSpeedInput =
-  //     new LoggedDashboardNumber("Flywheel Speed", 1500.0);
 
   /** The container for the robot. Contains subsystems, OI devices, and commands. */
   public RobotContainer() {
-    switch (Constants.currentMode) {
-      case REAL:
-        // Real robot, instantiate hardware IO implementations
-        drive =
-            new Drive(
-                new GyroIONavX(),
-                new ModuleIOSparkMax(0),
-                new ModuleIOSparkMax(1),
-                new ModuleIOSparkMax(2),
-                new ModuleIOSparkMax(3));
-        // flywheel = new Flywheel(new FlywheelIOSparkMax());
-        break;
+    // Real robot, instantiate hardware IO implementations
+    drive =
+        new Drive(
+            new GyroIONavX(),
+            new ModuleIOSparkMax(0),
+            new ModuleIOSparkMax(1),
+            new ModuleIOSparkMax(2),
+            new ModuleIOSparkMax(3));
+    // flywheel = new Flywheel(new FlywheelIOSparkMax());
+    shooter = new Shooter(new ShooterIOSparkMax());
 
-      case SIM:
-        // Sim robot, instantiate physics sim IO implementations
-        drive =
-            new Drive(
-                new GyroIO() {},
-                new ModuleIOSim(),
-                new ModuleIOSim(),
-                new ModuleIOSim(),
-                new ModuleIOSim());
-        // flywheel = new Flywheel(new FlywheelIOSim());
-        break;
-
-      default:
-        // Replayed robot, disable IO implementations
-        drive =
-            new Drive(
-                new GyroIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {},
-                new ModuleIO() {});
-        // flywheel = new Flywheel(new FlywheelIO() {});
-        break;
-    }
-
-    // Set up named commands for PathPlanner
+    // Set up auto routines
     // NamedCommands.registerCommand(
     //     "Run Flywheel",
     //     Commands.startEnd(
-    //         () -> flywheel.runVelocity(flywheelSpeedInput.get()), flywheel::stop, flywheel));
-
-    // Set up auto routines
+    //             () -> flywheel.runVelocity(flywheelSpeedInput.get()), flywheel::stop, flywheel)
+    //         .withTimeout(5.0));
     autoChooser = new LoggedDashboardChooser<>("Auto Choices", AutoBuilder.buildAutoChooser());
-
-    // Set up FF characterization routines
-    autoChooser.addOption(
-        "Drive FF Characterization",
-        new FeedForwardCharacterization(
-            drive, drive::runCharacterizationVolts, drive::getCharacterizationVelocity));
-    // autoChooser.addOption(
-    //     "Flywheel FF Characterization",
-    //     new FeedForwardCharacterization(
-    //         flywheel, flywheel::runCharacterizationVolts,
-    // flywheel::getCharacterizationVelocity));
-
-    autoChooser.addOption("Example Auto", new PathPlannerAuto("Example Auto"));
 
     // Configure the button bindings
     configureButtonBindings();
@@ -131,20 +93,69 @@ public class RobotContainer {
             () -> -controller.getLeftX(),
             () -> -controller.getRightX()));
     controller.x().onTrue(Commands.runOnce(drive::stopWithX, drive));
+    // Reset Pose
     controller
-        .b()
+        .povDown()
         .onTrue(
             Commands.runOnce(
                     () ->
                         drive.setPose(
-                            new Pose2d(drive.getPose().getTranslation(), new Rotation2d())),
+                            new Pose2d(
+                                drive.getPose().getTranslation(),
+                                new Rotation2d(
+                                    (DriverStation.getAlliance().get() == Alliance.Red)
+                                        ? 3.14
+                                        : 0))),
                     drive)
                 .ignoringDisable(true));
+    // Run Intake til there is a note, only run for a little bit
+    controller
+        .leftBumper()
+        .onTrue(
+            Commands.run(() -> shooter.runIndexerVelocity(500))
+                .alongWith(Commands.run(() -> shooter.runIntakeVelocity(1500)))
+                .onlyWhile(noteDetected.negate())
+                .withTimeout(30)
+                .andThen(shooter::stop));
+
+    // Clear everything while held
+    controller
+        .b()
+        .and(controller.y())
+        .whileTrue(
+            Commands.startEnd(() -> shooter.runShooterVelocity(2500.0), shooter::stop, shooter)
+                .alongWith(Commands.run(() -> shooter.runIntakeVelocity(-1500)))
+                .alongWith(Commands.run(() -> shooter.runIndexerVelocity(-500))));
+
+    // Shoot
+    controller
+        .rightBumper()
+        .onTrue(
+            Commands.race(
+                    Commands.run(() -> shooter.runShooterVelocity(4500)),
+                    Commands.waitSeconds(0.75))
+                .andThen(Commands.run(() -> shooter.runIndexerVelocity(4000)))
+                .onlyWhile(noteDetected)
+                .andThen(shooter::stop));
+
+    // Test
+    // controller
+    //     .leftTrigger()
+    //     .whileTrue(
+    //         Commands.startEnd(() -> shooter.runShooterVelocity(2500.0), shooter::stop, shooter));
+
+    // controller
+    //     .rightTrigger()
+    //     .whileTrue(
+    //         Commands.startEnd(() -> shooter.runIntakeVelocity(1500.0), shooter::stop, shooter));
+    // controller
+    //     .rightTrigger()
+    //     .onTrue(
+    //         Commands.startEnd(() -> shooter.runShooterVelocity(1000.0), shooter::stop, shooter)
+    //             .withTimeout(1));
     // controller
     //     .a()
-    //     .whileTrue(
-    //         Commands.startEnd(
-    //             () -> flywheel.runVelocity(flywheelSpeedInput.get()), flywheel::stop, flywheel));
+    //     .whileTrue(Commands.startEnd(() -> flywheel.runVelocity(100), flywheel::stop, flywheel));
   }
 
   /**

@@ -1,4 +1,4 @@
-// Copyright 2021-2023 FRC 6328
+// Copyright 2021-2024 FRC 6328
 // http://github.com/Mechanical-Advantage
 //
 // This program is free software; you can redistribute it and/or
@@ -13,37 +13,33 @@
 
 package frc.robot.subsystems.flywheel;
 
+import com.revrobotics.CANSparkBase.ControlType;
+import com.revrobotics.CANSparkLowLevel.MotorType;
 import com.revrobotics.CANSparkMax;
-import com.revrobotics.CANSparkMax.ControlType;
-import com.revrobotics.CANSparkMaxLowLevel.MotorType;
 import com.revrobotics.RelativeEncoder;
-import com.revrobotics.SparkMaxPIDController;
-import com.revrobotics.SparkMaxPIDController.ArbFFUnits;
+import com.revrobotics.SparkPIDController;
+import com.revrobotics.SparkPIDController.ArbFFUnits;
 import edu.wpi.first.math.util.Units;
+import frc.robot.Constants;
 
+/**
+ * NOTE: To use the Spark Flex / NEO Vortex, replace all instances of "CANSparkMax" with
+ * "CANSparkFlex".
+ */
 public class FlywheelIOSparkMax implements FlywheelIO {
-  private static final double GEAR_RATIO = 1.5;
+  private static final double GEAR_RATIO = 1.0;
 
-  private final CANSparkMax leader = new CANSparkMax(0, MotorType.kBrushless);
-  private final CANSparkMax follower = new CANSparkMax(1, MotorType.kBrushless);
+  private final CANSparkMax leader = new CANSparkMax(Constants.INTAKE_BOTTOM, MotorType.kBrushless);
   private final RelativeEncoder encoder = leader.getEncoder();
-  private final SparkMaxPIDController pid = leader.getPIDController();
+  private final SparkPIDController pid = leader.getPIDController();
 
   public FlywheelIOSparkMax() {
     leader.restoreFactoryDefaults();
-    follower.restoreFactoryDefaults();
-
     leader.setCANTimeout(250);
-    follower.setCANTimeout(250);
-
     leader.setInverted(false);
-    follower.follow(leader, false);
-
     leader.enableVoltageCompensation(12.0);
     leader.setSmartCurrentLimit(30);
-
     leader.burnFlash();
-    follower.burnFlash();
   }
 
   @Override
@@ -52,13 +48,13 @@ public class FlywheelIOSparkMax implements FlywheelIO {
     inputs.velocityRadPerSec =
         Units.rotationsPerMinuteToRadiansPerSecond(encoder.getVelocity() / GEAR_RATIO);
     inputs.appliedVolts = leader.getAppliedOutput() * leader.getBusVoltage();
-    inputs.currentAmps = new double[] {leader.getOutputCurrent(), follower.getOutputCurrent()};
+    inputs.currentAmps = leader.getOutputCurrent();
   }
 
-  @Override
-  public void setVoltage(double volts) {
-    leader.setVoltage(volts);
-  }
+  // @Override
+  // public void setVoltage(double volts) {
+  //   leader.setVoltage(volts);
+  // }
 
   @Override
   public void setVelocity(double velocityRadPerSec, double ffVolts) {

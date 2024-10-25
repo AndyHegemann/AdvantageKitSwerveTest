@@ -11,14 +11,14 @@
 // // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // // GNU General Public License for more details.
 
-// package frc.robot.subsystems.flywheel;
+// package frc.robot.subsystems.Shooter;
 
 // import edu.wpi.first.math.MathUtil;
 // import edu.wpi.first.math.controller.PIDController;
 // import edu.wpi.first.math.system.plant.DCMotor;
 // import edu.wpi.first.wpilibj.simulation.FlywheelSim;
 
-// public class FlywheelIOSim implements FlywheelIO {
+// public class ShooterIOSim implements ShooterIO {
 //   private FlywheelSim sim = new FlywheelSim(DCMotor.getNEO(1), 1.5, 0.004);
 //   private PIDController pid = new PIDController(0.0, 0.0, 0.0);
 
@@ -27,7 +27,7 @@
 //   private double appliedVolts = 0.0;
 
 //   @Override
-//   public void updateInputs(FlywheelIOInputs inputs) {
+//   public void updateInputs(ShooterIOInputs inputs) {
 //     if (closedLoop) {
 //       appliedVolts =
 //           MathUtil.clamp(pid.calculate(sim.getAngularVelocityRadPerSec()) + ffVolts, -12.0,
@@ -38,7 +38,7 @@
 //     sim.update(0.02);
 
 //     inputs.positionRad = 0.0;
-//     inputs.velocityRadPerSec = sim.getAngularVelocityRadPerSec();
+//     inputs.velocityRPM = sim.getAngularVelocityRadPerSec();
 //     inputs.appliedVolts = appliedVolts;
 //     inputs.currentAmps = new double[] {sim.getCurrentDrawAmps()};
 //   }

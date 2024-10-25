@@ -11,27 +11,34 @@
 // MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
 // GNU General Public License for more details.
 
-package frc.robot.subsystems.flywheel;
+package frc.robot.subsystems.Shooter;
 
 import static edu.wpi.first.units.Units.*;
 
 import edu.wpi.first.math.controller.SimpleMotorFeedforward;
-import edu.wpi.first.math.util.Units;
 import edu.wpi.first.wpilibj2.command.SubsystemBase;
 import org.littletonrobotics.junction.Logger;
 
-public class Flywheel extends SubsystemBase {
-  private final FlywheelIO io;
-  private final FlywheelIOInputsAutoLogged inputs = new FlywheelIOInputsAutoLogged();
+public class Shooter extends SubsystemBase {
+  private final ShooterIO io;
+  private final ShooterIOInputsAutoLogged inputs = new ShooterIOInputsAutoLogged();
   private final SimpleMotorFeedforward Shooter_ffModel;
+  private final SimpleMotorFeedforward Indexer_ffModel;
+  private final SimpleMotorFeedforward Intake_ffModel;
   // private final SysIdRoutine sysId;
 
-  /** Creates a new Flywheel. */
-  public Flywheel(FlywheelIO io) {
+  /** Creates a new Shooter. */
+  public Shooter(ShooterIO io) {
     this.io = io;
 
-    Shooter_ffModel = new SimpleMotorFeedforward(0.1, 0.05);
-    io.configurePID(1.0, 0.0, 0.0);
+    Shooter_ffModel = new SimpleMotorFeedforward(0.0051, 0.0017);
+    io.Shooter_configurePID(.00009, 0.0000001, 0.0001);
+
+    Intake_ffModel = new SimpleMotorFeedforward(0.001, 0.005);
+    io.Intake_configurePID(.00003, 0.000001, 0.00);
+
+    Indexer_ffModel = new SimpleMotorFeedforward(0.001, 0.005);
+    io.Indexer_configurePID(.00005, 0.000001, 0.000);
 
     // Configure SysId
     // sysId =
@@ -47,7 +54,7 @@ public class Flywheel extends SubsystemBase {
   @Override
   public void periodic() {
     io.updateInputs(inputs);
-    Logger.processInputs("Flywheel", inputs);
+    Logger.processInputs("Shooter", inputs);
   }
 
   // /** Run open loop at the specified voltage. */
@@ -56,15 +63,30 @@ public class Flywheel extends SubsystemBase {
   // }
 
   /** Run closed loop at the specified velocity. */
-  public void runVelocity(double velocityRPM) {
-    var velocityRadPerSec = Units.rotationsPerMinuteToRadiansPerSecond(velocityRPM);
-    io.setVelocity(velocityRadPerSec, Shooter_ffModel.calculate(velocityRadPerSec));
-
-    // Log flywheel setpoint
-    Logger.recordOutput("Flywheel/SetpointRPM", velocityRPM);
+  public void runShooterVelocity(double velocityRPM) {
+    io.setShooterVelocity(
+        velocityRPM,
+        Shooter_ffModel.calculate(velocityRPM),
+        velocityRPM,
+        Shooter_ffModel.calculate(velocityRPM));
+    Logger.recordOutput("Shooter/ShooterSetpointRPM", velocityRPM);
   }
 
-  /** Stops the flywheel. */
+  public void runIntakeVelocity(double velocityRPM) {
+    io.setIntakeVelocity(
+        velocityRPM,
+        Intake_ffModel.calculate(velocityRPM),
+        velocityRPM,
+        Intake_ffModel.calculate(velocityRPM));
+    Logger.recordOutput("Shooter/IntakeSetpointRPM", velocityRPM);
+  }
+
+  public void runIndexerVelocity(double velocityRPM) {
+    io.setIndexerVelocity(velocityRPM, Indexer_ffModel.calculate(velocityRPM));
+    Logger.recordOutput("Shooter/IndexerSetpointRPM", velocityRPM);
+  }
+
+  /** Stops the shooter. */
   public void stop() {
     io.stop();
   }
@@ -77,16 +99,16 @@ public class Flywheel extends SubsystemBase {
   // /** Returns a command to run a dynamic test in the specified direction. */
   // public Command sysIdDynamic(SysIdRoutine.Direction direction) {
   //   return sysId.dynamic(direction);
-  // }
+}
 
-  /** Returns the current velocity in RPM. */
+  // /** Returns the current velocity in RPM. */
   // @AutoLogOutput
   // public double getVelocityRPM() {
-  //   return Units.radiansPerSecondToRotationsPerMinute(inputs.velocityRadPerSec);
+  //   return inputs.velocityRPM;
   // }
 
-  /** Returns the current velocity in radians per second. */
+  // /** Returns the current velocity in radians per second. */
   // public double getCharacterizationVelocity() {
-  //   return inputs.velocityRadPerSec;
+  //   return inputs.velocityRPM;
   // }
-}
+// }
